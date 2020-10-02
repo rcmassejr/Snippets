@@ -1,0 +1,51 @@
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/*
+	To use function copy the following into your IQA or SSRS
+		dbo.bsi_DecodeMultiSelect(SUBJECT,'B_CE_SUBJECT')
+	Replacing SUBJECT with your multiselect field (including BO at the start if necessary)
+		and   'B_CE_SUBJECT' with the table name from gen_tables
+*/
+CREATE FUNCTION [dbo].[bsi_DecodeMultiSelect](  
+     @stringToSplit varchar(500) = NULL,
+	 @tableName varchar(50)  
+     )  
+     returns varchar(2000)  
+AS  
+BEGIN  
+     DECLARE @name NVARCHAR(255), @returnList nvarchar(2000)
+	 DECLARE @pos INT
+	 Set @returnList = ''
+
+	 WHILE CHARINDEX(',', @stringToSplit) > 0
+	 BEGIN
+	  SELECT @pos  = CHARINDEX(',', @stringToSplit)  
+	  SELECT @name = SUBSTRING(@stringToSplit, 1, @pos-1)
+
+	  Set @name = (Select DESCRIPTION from Gen_Tables t where t.TABLE_NAME = @tableName and t.CODE = @name)
+
+	  If @returnList = ''
+		Set @returnList = @name
+	  Else
+	    Set @returnList = @returnList + ', ' + @name 
+
+	  SELECT @stringToSplit = SUBSTRING(@stringToSplit, @pos+1, LEN(@stringToSplit)-@pos)
+	 END
+
+	 If @returnList = ''
+	   Begin
+		  Set @name = (Select DESCRIPTION from Gen_Tables t where t.TABLE_NAME = @tableName and t.CODE = @stringToSplit)
+		  Set @returnList = @name
+	   End
+	 Else
+	    Begin
+			Set @name = @stringToSplit
+			Set @name = (Select DESCRIPTION from Gen_Tables t where t.TABLE_NAME = @tableName and t.CODE = @name)
+			Set @returnList = @returnList + ', ' + @name 
+		End
+
+	 RETURN @returnList
+ END
+
